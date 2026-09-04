@@ -1,0 +1,47 @@
+# ClearRoad AI -- local dev stack (app + CockroachDB)
+#
+# Run: docker compose up --build
+#
+# GUI note: the app container needs to reach an X server running on your
+# Windows host (VcXsrv/XLaunch) to display the Tkinter window. Start
+# VcXsrv first with "Disable access control" checked, then set DISPLAY
+# below to your host IP (see README for the exact steps).
+
+services:
+  db:
+    image: cockroachdb/cockroach:v23.2.0
+    command: start-single-node --insecure
+    ports:
+      - "26257:26257"   # SQL port
+      - "8080:8080"     # CockroachDB admin UI (separate from the app's own dashboard)
+    volumes:
+      - cockroach-data:/cockroach/cockroach-data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health?ready=1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Points psycopg2 at the "db" service by its Compose network name.
+      - CLEARROAD_DB_URL=postgresql://root@db:26257/defaultdb?sslmode=disable
+      # Set this to your Windows host IP for VcXsrv (e.g. "192.168.1.10:0.0").
+      # Easiest way to find it: run `ipconfig` on Windows, use the IPv4
+      # address of your active network adapter.
+      - DISPLAY=${DISPLAY:-host.docker.internal:0.0}
+      # Live camera bridge: run `python host_camera_server.py` on the
+      # Windows host (separately, before/alongside `docker compose up`)
+      # to serve your webcam as a network stream. host.docker.internal
+      # resolves to the host machine from inside the container, so this
+      # reaches that stream without needing /dev/video0 device passthrough
+      # (which Windows doesn't support). Comment this out and instead set
+      # VIDEO_SOURCE directly in config.py to fall back to a video file.
+      - CLEARROAD_VIDEO_SOURCE=http://host.docker.internal:5000/video_feed
+
+volumes:
+  cockroach-data:

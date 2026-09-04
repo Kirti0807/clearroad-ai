@@ -1,0 +1,25 @@
+# Virtual environment
+venv/
+env/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Downloaded model weights (large binary, regenerated automatically on first run)
+yolov8n.pt
+
+# Test video files (large, not meant to be committed)
+foggy_test.mp4
+*.mp4
+
+# VS Code
+.vscode/
+
+# OS clutter
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.override.yml
